@@ -167,6 +167,15 @@ ttnn::Tensor ReshapeViewOperation::invoke(const ttnn::Tensor& tensor, const ttnn
     if (tensor_shape == shape) {
         return tensor;
     }
+
+    // Just edit shape if shape has a 0 dimension
+    for (auto index = 0; index < shape.rank(); ++index) {
+        if (shape[index] == 0) {
+            std::cout << "!!! 0 dimension !!!" << std::endl;
+            return tensor.reshape(shape);
+        }
+    }
+
     //This is a constraint Torch places on reshape I was assuming, but it causes half of the codebase to fail if added
     //Validate_transform(tensor_shape, shape)
     //For view the following cases work:
@@ -176,6 +185,7 @@ ttnn::Tensor ReshapeViewOperation::invoke(const ttnn::Tensor& tensor, const ttnn
         ((tensor.get_layout() == ttnn::ROW_MAJOR_LAYOUT) || //Its row major
         (tensor_shape[-2]==shape[-2]) || //Second last dimension is the same
         (shape[-2]%ttnn::types::TILE_SIZE==0 && tensor_shape[-2]%ttnn::types::TILE_SIZE==0)); //There is no padding on the second last dimension
+
     bool tile_tensor_view_reshape_possible = (layout == ttnn::Layout::TILE and
         ((shape.with_tile_padding()[-2] % ttnn::TILE_SIZE == 0) and (shape.with_tile_padding()[-1] % ttnn::TILE_SIZE == 0)) and
         (tensor_shape.with_tile_padding()[-1] == shape.with_tile_padding()[-1])
