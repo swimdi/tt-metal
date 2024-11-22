@@ -169,7 +169,11 @@ ttnn::Tensor ReshapeViewOperation::invoke(const ttnn::Tensor& tensor, const ttnn
     }
 
     // Just edit shape if shape has a 0 dimension
-    if tensor.volume() == 0 {
+    if (tensor.volume() == 0) {
+        TT_ASSERT(shape.volume() == 0 && "tensor's volume is 0, but shape's volume is not 0");
+        TT_ASSERT((tensor.storage_type() != StorageType::MULTI_DEVICE &&
+                   tensor.storage_type() != StorageType::MULTI_DEVICE_HOST) &&
+                   "Reshaping a multi-device tensor with 0 volume is not supported");
         return tensor.reshape(shape);
     }
 
@@ -182,7 +186,6 @@ ttnn::Tensor ReshapeViewOperation::invoke(const ttnn::Tensor& tensor, const ttnn
         ((tensor.get_layout() == ttnn::ROW_MAJOR_LAYOUT) || //Its row major
         (tensor_shape[-2]==shape[-2]) || //Second last dimension is the same
         (shape[-2]%ttnn::types::TILE_SIZE==0 && tensor_shape[-2]%ttnn::types::TILE_SIZE==0)); //There is no padding on the second last dimension
-
     bool tile_tensor_view_reshape_possible = (layout == ttnn::Layout::TILE and
         ((shape.with_tile_padding()[-2] % ttnn::TILE_SIZE == 0) and (shape.with_tile_padding()[-1] % ttnn::TILE_SIZE == 0)) and
         (tensor_shape.with_tile_padding()[-1] == shape.with_tile_padding()[-1])
